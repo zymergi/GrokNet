@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GrokNet/GrokNet.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GrokNet.Tests/GrokNet.Tests.csproj" />
+  </Folder>
+</Solution>
