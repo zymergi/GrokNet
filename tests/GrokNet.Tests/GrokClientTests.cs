@@ -17,9 +17,9 @@ public class GrokClientTests
     }
 
     [Fact]
-    public async Task ChatCompletionAsync_ReturnsValidResponse()
+    public async Task GenerateTextAsync_ReturnsValidResponse()
     {
-        var expected = new ChatCompletionResponse
+        var rawResponse = new GenerateTextRawResponse
         {
             Id = "chatcmpl-123",
             Object = "chat.completion",
@@ -27,7 +27,7 @@ public class GrokClientTests
             Model = "grok-3",
             Choices =
             [
-                new Choice
+                new GenerateTextChoice
                 {
                     Index = 0,
                     Message = new Message { Role = "assistant", Content = "Hello!" },
@@ -37,37 +37,36 @@ public class GrokClientTests
             Usage = new Usage { PromptTokens = 10, CompletionTokens = 5, TotalTokens = 15 }
         };
 
-        var handler = new MockHttpMessageHandler(JsonSerializer.Serialize(expected, JsonOptions), HttpStatusCode.OK);
+        var handler = new MockHttpMessageHandler(JsonSerializer.Serialize(rawResponse, JsonOptions), HttpStatusCode.OK);
         var client = CreateClient(handler);
 
-        var request = new ChatCompletionRequest
+        var request = new GenerateTextRequest
         {
             Model = "grok-3",
             Messages = [new Message { Role = "user", Content = "Hi" }]
         };
 
-        var result = await client.ChatCompletionAsync(request);
+        var result = await client.GenerateTextAsync(request);
 
-        Assert.Equal("chatcmpl-123", result.Id);
-        Assert.Single(result.Choices);
-        Assert.Equal("Hello!", result.Choices[0].Message.Content);
-        Assert.NotNull(result.Usage);
-        Assert.Equal(15, result.Usage.TotalTokens);
+        Assert.Equal("Hello!", result.Text);
+        Assert.Equal("chatcmpl-123", result.RawResponse.Id);
+        Assert.NotNull(result.RawResponse.Usage);
+        Assert.Equal(15, result.RawResponse.Usage.TotalTokens);
     }
 
     [Fact]
-    public async Task ChatCompletionAsync_ThrowsOnErrorStatus()
+    public async Task GenerateTextAsync_ThrowsOnErrorStatus()
     {
         var handler = new MockHttpMessageHandler("{\"error\":\"bad request\"}", HttpStatusCode.BadRequest);
         var client = CreateClient(handler);
 
-        var request = new ChatCompletionRequest
+        var request = new GenerateTextRequest
         {
             Model = "grok-3",
             Messages = [new Message { Role = "user", Content = "Hi" }]
         };
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => client.ChatCompletionAsync(request));
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.GenerateTextAsync(request));
     }
 
     [Fact]
@@ -91,18 +90,18 @@ public class GrokClientTests
     }
 
     [Fact]
-    public async Task ChatCompletionAsync_SendsAuthorizationHeader()
+    public async Task GenerateTextAsync_SendsAuthorizationHeader()
     {
-        var handler = new MockHttpMessageHandler("{\"id\":\"1\",\"object\":\"chat.completion\",\"created\":0,\"model\":\"grok-3\",\"choices\":[]}", HttpStatusCode.OK);
+        var handler = new MockHttpMessageHandler("{\"id\":\"1\",\"object\":\"chat.completion\",\"created\":0,\"model\":\"grok-3\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"hi\"},\"finish_reason\":\"stop\"}]}", HttpStatusCode.OK);
         var client = CreateClient(handler);
 
-        var request = new ChatCompletionRequest
+        var request = new GenerateTextRequest
         {
             Model = "grok-3",
             Messages = [new Message { Role = "user", Content = "Hi" }]
         };
 
-        await client.ChatCompletionAsync(request);
+        await client.GenerateTextAsync(request);
 
         Assert.NotNull(handler.LastRequest);
         Assert.Equal("Bearer", handler.LastRequest!.Headers.Authorization?.Scheme);
