@@ -1,10 +1,14 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace GrokNet;
 
+/// <summary>
+/// Client for interacting with the Grok API.
+/// </summary>
+/// <param name="httpClient">The HTTP client used for making requests.</param>
+/// <param name="apiKey">The API key for authenticating with the Grok API.</param>
 public class GrokClient(HttpClient httpClient, string apiKey)
 {
     private const string BaseUrl = "https://api.x.ai/v1";
@@ -16,39 +20,6 @@ public class GrokClient(HttpClient httpClient, string apiKey)
         client.BaseAddress ??= new Uri(BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         return client;
-    }
-
-    public async Task<GenerateTextResponse> GenerateTextAsync(
-        GenerateTextRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await _httpClient.PostAsJsonAsync(
-            "/v1/chat/completions",
-            request,
-            JsonOptions.Default,
-            cancellationToken);
-
-        response.EnsureSuccessStatusCode();
-
-        var chatResponse = await response.Content.ReadFromJsonAsync<GenerateTextRawResponse>(
-            JsonOptions.Default, cancellationToken)
-            ?? throw new InvalidOperationException("Received null response from API.");
-
-        return new GenerateTextResponse
-        {
-            Text = chatResponse.Choices[0].Message.Content,
-            RawResponse = chatResponse
-        };
-    }
-
-    public async Task<ModelsResponse> ListModelsAsync(CancellationToken cancellationToken = default)
-    {
-        var response = await _httpClient.GetAsync("/v1/models", cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        return await response.Content.ReadFromJsonAsync<ModelsResponse>(
-            JsonOptions.Default, cancellationToken)
-            ?? throw new InvalidOperationException("Received null response from API.");
     }
 }
 
